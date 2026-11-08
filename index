@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Préstamo Material STEAM - CEIP Toxiria</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .nav-active { color: #38bdf8; border-top: 2px solid #38bdf8; }
+    #reader video { border-radius: 0.75rem; object-fit: cover; width: 100% !important; }
+  </style>
+</head>
+<body class="pb-20 max-w-md mx-auto min-h-screen relative border-x border-slate-800 shadow-2xl">
+
+  <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="bg-sky-500 text-slate-950 p-2 rounded-xl font-bold">
+        <i class="fa-solid fa-microchip text-xl"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-base leading-tight">STEAM Toxiria</h1>
+        <p class="text-xs text-slate-400">CEIP Toxiria · Préstamos & Aula</p>
+      </div>
+    </div>
+    <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">v2.2 iOS</span>
+  </header>
+
+  <main id="app-content" class="p-4 space-y-4">
+  </main>
+
+  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2 z-50 text-slate-400 text-xs">
+    <button onclick="switchTab('scanner')" id="nav-scanner" class="flex flex-col items-center py-1 px-3 space-y-1 nav-active">
+      <i class="fa-solid fa-qrcode text-lg"></i>
+      <span>Escáner</span>
+    </button>
+    <button onclick="switchTab('prestar')" id="nav-prestar" class="flex flex-col items-center py-1 px-3 space-y-1">
+      <i class="fa-solid fa-hand-holding-hand text-lg"></i>
+      <span>Prestar</span>
+    </button>
+    <button onclick="switchTab('devolver')" id="nav-devolver" class="flex flex-col items-center py-1 px-3 space-y-1">
+      <i class="fa-solid fa-rotate-left text-lg"></i>
+      <span>Devolver</span>
+    </button>
+    <button onclick="switchTab('aula')" id="nav-aula" class="flex flex-col items-center py-1 px-3 space-y-1">
+      <i class="fa-solid fa-calendar-days text-lg"></i>
+      <span>Aula STEAM</span>
+    </button>
+  </nav>
+
+  <script>
+    let currentTab = 'scanner';
+    let html5QrCode = null;
+
+    function switchTab(tab) {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(err => console.log(err));
+      }
+      currentTab = tab;
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('nav-active'));
+      document.getElementById('nav-' + tab).classList.add('nav-active');
+      render();
+    }
+
+    function render() {
+      const container = document.getElementById('app-content');
+      if (currentTab === 'scanner') {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-4">
+            <h2 class="font-bold text-lg text-slate-100">Escáner de Equipos</h2>
+            <p class="text-xs text-slate-400">Apunta la cámara al código QR o selecciona una foto</p>
+            
+            <div id="reader" class="w-full bg-slate-950 rounded-xl border border-slate-800 min-h-[250px] overflow-hidden flex flex-col items-center justify-center relative">
+              <i class="fa-solid fa-camera text-4xl text-slate-600 mb-2"></i>
+              <p class="text-xs text-slate-500">Haz clic en "Iniciar Cámara" para comenzar</p>
+            </div>
+
+            <div class="space-y-2 pt-2">
+              <button onclick="startCamera()" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 py-3 rounded-xl text-sm font-bold shadow-lg shadow-sky-500/20">
+                <i class="fa-solid fa-video mr-1.5"></i> Iniciar Cámara en Vivo
+              </button>
+              
+              <div class="flex space-x-2">
+                <input type="file" id="qr-input-file" accept="image/*" class="hidden" onchange="scanImage(event)">
+                <button onclick="document.getElementById('qr-input-file').click()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-sm font-medium border border-slate-700">
+                  <i class="fa-solid fa-file-image mr-1 text-sky-400"></i> Seleccionar foto QR
+                </button>
+              </div>
+            </div>
+
+            <div id="scan-result" class="hidden p-3 rounded-xl bg-slate-800 border border-slate-700 text-left text-xs"></div>
+
+            <div class="pt-3 border-t border-slate-800/80 text-left">
+              <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Simulación sin cámara:</p>
+              <div class="flex flex-wrap gap-1.5">
+                <button onclick="simScan('CHROME-003')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg text-xs font-mono border border-slate-700">CHROME-003</button>
+                <button onclick="simScan('MIC-001')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg text-xs font-mono border border-slate-700">MIC-001</button>
+                <button onclick="simScan('PORT-001')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg text-xs font-mono border border-slate-700">PORT-001</button>
+                <button onclick="simScan('TAB-005')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg text-xs font-mono border border-slate-700">TAB-005</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (currentTab === 'prestar') {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h2 class="font-bold text-lg">Nuevo Préstamo</h2>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Docente</label>
+              <input type="text" id="docente-name" placeholder="Nombre del profesor/a" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Código del Equipo</label>
+              <input type="text" id="equipo-code" placeholder="Ej. CHROME-001, MIC-003" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-sky-500">
+            </div>
+            <button onclick="confirmLoan()" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3 rounded-xl text-sm mt-2">
+              Registrar Préstamo
+            </button>
+          </div>
+        `;
+      } else if (currentTab === 'devolver') {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h2 class="font-bold text-lg">Devoluciones Pendientes</h2>
+            <div id="pending-loans" class="space-y-2">
+              <p class="text-xs text-slate-400 italic">No hay préstamos pendientes registrados.</p>
+            </div>
+          </div>
+        `;
+      } else if (currentTab === 'aula') {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h2 class="font-bold text-lg">Reserva Aula STEAM</h2>
+            <p class="text-xs text-slate-400">Selecciona el tramo para registrar la sesión.</p>
+            <div class="space-y-2 pt-2">
+              <div class="p-3 bg-red-950/40 border border-red-900/50 rounded-xl flex justify-between items-center text-xs">
+                <div>
+                  <p class="font-semibold text-red-400">Música (Bloqueado)</p>
+                  <p class="text-slate-400">Martes 10:00 - 11:30</p>
+                </div>
+                <span class="px-2 py-0.5 bg-red-900/60 text-red-300 rounded text-[10px]">Fijo</span>
+              </div>
+              <div class="p-3 bg-emerald-950/40 border border-emerald-900/50 rounded-xl flex justify-between items-center text-xs">
+                <div>
+                  <p class="font-semibold text-emerald-400">Tramo Disponible</p>
+                  <p class="text-slate-400">Miércoles 09:00 - 10:00</p>
+                </div>
+                <button class="px-2.5 py-1 bg-emerald-500 text-slate-950 rounded font-semibold text-[11px]">Reservar</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function startCamera() {
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+      
+      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+      
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+          let cameraId = devices[0].id;
+          for (let dev of devices) {
+            if (dev.label.toLowerCase().includes('back') || dev.label.toLowerCase().includes('trasera') || dev.label.toLowerCase().includes('rear')) {
+              cameraId = dev.id;
+              break;
+            }
+          }
+          html5QrCode.start(cameraId, config, (decodedText) => {
+            showResult(decodedText);
+            html5QrCode.stop();
+          }, () => {});
+        } else {
+          html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+            showResult(decodedText);
+            html5QrCode.stop();
+          }, () => {});
+        }
+      }).catch(err => {
+        html5QrCode.start({ facingMode: "user" }, config, (decodedText) => {
+          showResult(decodedText);
+          html5QrCode.stop();
+        }, () => {}).catch(e => alert("No se pudo iniciar la cámara: " + e));
+      });
+    }
+
+    function scanImage(e) {
+      if (!e.target.files || e.target.files.length === 0) return;
+      const imageFile = e.target.files[0];
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+      html5QrCode.scanFile(imageFile, true)
+        .then(decodedText => showResult(decodedText))
+        .catch(err => alert("No se detectó código QR en la imagen seleccionada."));
+    }
+
+    function simScan(code) {
+      showResult(code);
+    }
+
+    function showResult(code) {
+      const res = document.getElementById('scan-result');
+      res.classList.remove('hidden');
+      res.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sky-400 font-bold font-mono text-sm">${code}</p>
+            <p class="text-slate-300 mt-0.5">Equipo detectado correctamente</p>
+          </div>
+          <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-[10px]">Disponible</span>
+        </div>
+        <button onclick="prestarDirecto('${code}')" class="w-full mt-2.5 bg-sky-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs">
+          Prestar ${code}
+        </button>
+      `;
+    }
+
+    function prestarDirecto(code) {
+      switchTab('prestar');
+      setTimeout(() => {
+        document.getElementById('equipo-code').value = code;
+      }, 100);
+    }
+
+    render();
+  </script>
+</body>
+</html>
