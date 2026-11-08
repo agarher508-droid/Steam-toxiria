@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AulaSTEAM Toxiria App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        junta: {
+                            500: '#00a041',
+                            600: '#008433',
+                            700: '#006627',
+                            900: '#003614',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { user-select: none; -webkit-tap-highlight-color: transparent; }
+        .scanner-laser {
+            position: absolute;
+            height: 3px;
+            width: 100%;
+            background-color: #10b981;
+            box-shadow: 0 0 12px #10b981;
+            animation: scan 1.8s infinite ease-in-out;
+        }
+        @keyframes scan {
+            0% { top: 10%; }
+            50% { top: 85%; }
+            100% { top: 10%; }
+        }
+        /* Touch friendly active buttons */
+        .btn-active:active { transform: scale(0.96); }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 font-sans flex justify-center items-center sm:py-6">
+
+    <!-- Mobile Frame Wrap (En escritorio simula un móvil, en Smartphone ocupa el 100%) -->
+    <div class="w-full sm:max-w-md h-full sm:h-[844px] bg-slate-900 sm:rounded-[40px] shadow-2xl border-0 sm:border-8 border-slate-800 flex flex-col overflow-hidden relative">
+
+        <!-- Top Header App -->
+        <header class="bg-slate-900 border-b border-slate-800 px-5 py-3.5 flex items-center justify-between sticky top-0 z-20">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-atom text-base"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-sm tracking-wide text-white">AulaSTEAM</h1>
+                    <p class="text-[10px] text-emerald-400 font-medium">CEIP Toxiria</p>
+                </div>
+            </div>
+            <button onclick="resetDataConfirm()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs border border-slate-700 btn-active">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+        </header>
+
+        <!-- Notification Toast Container -->
+        <div id="toast-container" class="absolute top-16 inset-x-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+        <!-- App Main Content Area -->
+        <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
+
+            <!-- ================= TAB 1: SCANNER CÁMARA QR ================= -->
+            <section id="app-tab-camera" class="space-y-4">
+                <div class="text-center space-y-1">
+                    <h2 class="text-lg font-extrabold text-white">Escáner de Equipos</h2>
+                    <p class="text-xs text-slate-400">Escanea la etiqueta del Chromebook, Portátil, Tablet o Micrófono</p>
+                </div>
+
+                <!-- Cámara / Visor óptico -->
+                <div class="relative w-full h-56 bg-slate-950 rounded-3xl border-2 border-emerald-500/40 overflow-hidden flex flex-col items-center justify-center shadow-inner">
+                    <div class="scanner-laser"></div>
+                    <i class="fa-solid fa-camera text-4xl text-slate-700 mb-2"></i>
+                    <span class="text-xs text-emerald-400 font-semibold">Cámara Activa</span>
+                    <span class="text-[10px] text-slate-500 mt-1">Apunta al código QR o código de barras</span>
+                </div>
+
+                <!-- Búsqueda / Manual -->
+                <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700 space-y-2">
+                    <label class="text-[11px] font-bold uppercase text-slate-400">O Introduce el código manual:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="app-qr-input" placeholder="Ej: CHROME-005, MIC-002" class="flex-1 px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-mono uppercase text-white focus:outline-none focus:border-emerald-500">
+                        <button onclick="handleAppQRScan()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold btn-active">
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botones de prueba rápida para profs -->
+                <div class="space-y-1.5">
+                    <p class="text-[11px] font-semibold text-slate-400 text-center">Tocar para simular lectura de etiqueta:</p>
+                    <div class="flex flex-wrap justify-center gap-1.5" id="app-quick-scan-btns">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Scan Result Mobile Card -->
+                <div id="app-scan-result" class="hidden bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-3">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+
+            <!-- ================= TAB 2: PRÉSTAMO RÁPIDO ================= -->
+            <section id="app-tab-loan" class="space-y-4 hidden">
+                <div class="text-center space-y-1">
+                    <h2 class="text-lg font-extrabold text-white">Nuevo Préstamo</h2>
+                    <p class="text-xs text-slate-400">Asigna un equipo a un docente o curso</p>
+                </div>
+
+                <form id="app-loan-form" onsubmit="handleAppCreateLoan(event)" class="bg-slate-800 p-4 rounded-3xl border border-slate-700 space-y-3.5">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Docente / Profesor/a *</label>
+                        <input type="text" id="app-loan-teacher" required placeholder="Nombre completo" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Curso / Aula Destino *</label>
+                        <select id="app-loan-group" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="">Selecciona Curso</option>
+                            <option value="Infantil 3 años">Infantil 3 años</option>
+                            <option value="Infantil 4 años">Infantil 4 años</option>
+                            <option value="Infantil 5 años">Infantil 5 años</option>
+                            <option value="1º Primaria">1º Primaria</option>
+                            <option value="2º Primaria">2º Primaria</option>
+                            <option value="3º Primaria">3º Primaria</option>
+                            <option value="4º Primaria">4º Primaria</option>
+                            <option value="5º Primaria">5º Primaria</option>
+                            <option value="6º Primaria">6º Primaria</option>
+                            <option value="Música / Especialidades">Música / Especialidades</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Equipo / Recurso Individual *</label>
+                        <select id="app-loan-item-code" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Salida</label>
+                            <input type="date" id="app-loan-start" required class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Devolución</label>
+                            <input type="date" id="app-loan-due" required class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm rounded-xl shadow-lg transition btn-active flex items-center justify-center space-x-2 mt-2">
+                        <i class="fa-solid fa-check text-base"></i>
+                        <span>CONFIRMAR PRÉSTAMO</span>
+                    </button>
+                </form>
+            </section>
+
+
+            <!-- ================= TAB 3: DEVOLUCIÓN RÁPIDA ================= -->
+            <section id="app-tab-returns" class="space-y-4 hidden">
+                <div class="text-center space-y-1">
+                    <h2 class="text-lg font-extrabold text-white">Devolución Rápida</h2>
+                    <p class="text-xs text-slate-400">Registra la recogida del equipo prestado</p>
+                </div>
+
+                <div id="app-active-loans-list" class="space-y-3">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </section>
+
+
+            <!-- ================= TAB 4: CALENDARIO AULA STEAM ================= -->
+            <section id="app-tab-schedule" class="space-y-4 hidden">
+                <div class="text-center space-y-1">
+                    <h2 class="text-lg font-extrabold text-white">Aula STEAM</h2>
+                    <p class="text-xs text-slate-400">Cuadrante semanal con reserva directa</p>
+                </div>
+
+                <!-- Leyenda rápida -->
+                <div class="flex justify-around bg-slate-800 p-2.5 rounded-2xl text-[11px] font-medium border border-slate-700">
+                    <span class="flex items-center gap-1 text-emerald-400"><i class="fa-solid fa-circle text-[8px]"></i> Libre</span>
+                    <span class="flex items-center gap-1 text-blue-400"><i class="fa-solid fa-circle text-[8px]"></i> Reservado</span>
+                    <span class="flex items-center gap-1 text-amber-400"><i class="fa-solid fa-lock text-[10px]"></i> Música</span>
+                </div>
+
+                <!-- Selector de día -->
+                <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800" id="app-day-selector">
+                    <button onclick="setScheduleDay('Lunes')" class="app-day-btn flex-1 py-1.5 text-center text-xs font-bold rounded-xl bg-emerald-600 text-white">Lun</button>
+                    <button onclick="setScheduleDay('Martes')" class="app-day-btn flex-1 py-1.5 text-center text-xs font-bold rounded-xl text-slate-400">Mar</button>
+                    <button onclick="setScheduleDay('Miércoles')" class="app-day-btn flex-1 py-1.5 text-center text-xs font-bold rounded-xl text-slate-400">Mié</button>
+                    <button onclick="setScheduleDay('Jueves')" class="app-day-btn flex-1 py-1.5 text-center text-xs font-bold rounded-xl text-slate-400">Jue</button>
+                    <button onclick="setScheduleDay('Viernes')" class="app-day-btn flex-1 py-1.5 text-center text-xs font-bold rounded-xl text-slate-400">Vie</button>
+                </div>
+
+                <!-- Tramos del Día Seleccionado -->
+                <div id="app-day-slots-container" class="space-y-2">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+        </main>
+
+
+        <!-- Bottom Navigation Bar App (4 pestañas esenciales) -->
+        <nav class="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 fixed sm:absolute bottom-0 inset-x-0 h-16 px-2 flex justify-around items-center z-30">
+            <button onclick="switchAppTab('camera')" id="app-nav-camera" class="app-nav-item flex-1 flex flex-col items-center justify-center text-emerald-400">
+                <i class="fa-solid fa-qrcode text-lg mb-0.5"></i>
+                <span class="text-[10px] font-bold">Escáner</span>
+            </button>
+
+            <button onclick="switchAppTab('loan')" id="app-nav-loan" class="app-nav-item flex-1 flex flex-col items-center justify-center text-slate-400 hover:text-white">
+                <i class="fa-solid fa-handshake text-lg mb-0.5"></i>
+                <span class="text-[10px] font-bold">Prestar</span>
+            </button>
+
+            <button onclick="switchAppTab('returns')" id="app-nav-returns" class="app-nav-item flex-1 flex flex-col items-center justify-center text-slate-400 hover:text-white relative">
+                <i class="fa-solid fa-rotate-left text-lg mb-0.5"></i>
+                <span class="text-[10px] font-bold">Devolver</span>
+                <span id="app-badge-returns" class="absolute top-1 right-5 bg-amber-500 text-slate-950 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
+            </button>
+
+            <button onclick="switchAppTab('schedule')" id="app-nav-schedule" class="app-nav-item flex-1 flex flex-col items-center justify-center text-slate-400 hover:text-white">
+                <i class="fa-solid fa-calendar-days text-lg mb-0.5"></i>
+                <span class="text-[10px] font-bold">Aula STEAM</span>
+            </button>
+        </nav>
+
+    </div>
+
+
+    <!-- ================= JAVASCRIPT APP LOGIC ================= -->
+    <script>
+        const STORAGE_MATERIALS_KEY = 'toxiria_materials_app_v1';
+        const STORAGE_LOANS_KEY = 'toxiria_loans_app_v1';
+        const STORAGE_RESERVATIONS_KEY = 'toxiria_res_app_v1';
+        const STORAGE_BLOCKS_KEY = 'toxiria_blocks_app_v1';
+
+        const TIME_SLOTS = [
+            "T1 (09:00 - 10:00)",
+            "T2 (10:00 - 11:00)",
+            "T3 (11:00 - 11:30)",
+            "RECREO (11:30 - 12:00)",
+            "T4 (12:00 - 13:00)",
+            "T5 (13:00 - 14:00)"
+        ];
+
+        let selectedDay = 'Lunes';
+        let materials = [];
+        let loans = [];
+        let reservations = [];
+        let musicBlocks = [];
+
+        function getRelativeDate(offset) {
+            const d = new Date();
+            d.setDate(d.getDate() + offset);
+            return d.toISOString().split('T')[0];
+        }
+
+        function generateAppMaterials() {
+            const list = [];
+            for (let i = 1; i <= 24; i++) {
+                const code = `CHROME-${String(i).padStart(3, '0')}`;
+                list.push({ code, name: `Chromebook #${i}`, category: 'Chromebook', status: (i===3 || i===7)?'LOANED':'AVAILABLE' });
+            }
+            for (let i = 1; i <= 18; i++) {
+                const code = `PORT-${String(i).padStart(3, '0')}`;
+                list.push({ code, name: `Portátil HP #${i}`, category: 'Portátil', status: 'AVAILABLE' });
+            }
+            for (let i = 1; i <= 25; i++) {
+                const code = `TAB-${String(i).padStart(3, '0')}`;
+                list.push({ code, name: `Tablet Samsung #${i}`, category: 'Tablet', status: (i===5)?'LOANED':'AVAILABLE' });
+            }
+            for (let i = 1; i <= 18; i++) {
+                const code = `MIC-${String(i).padStart(3, '0')}`;
+                list.push({ code, name: `Micrófono Profesor #${i}`, category: 'Micrófono', status: (i===1)?'LOANED':'AVAILABLE' });
+            }
+            list.push({ code: 'ROB-BEE-001', name: 'Pack 6 Bee-Bot', category: 'Robótica', status: 'AVAILABLE' });
+            list.push({ code: '3D-END-001', name: 'Impresora 3D Ender', category: 'Fabricación 3D', status: 'AVAILABLE' });
+            return list;
+        }
+
+        const DEFAULT_LOANS = [
+            { id: 'l1', materialCode: 'CHROME-003', teacher: 'María García', group: '5º Primaria', dueDate: getRelativeDate(2), returned: false },
+            { id: 'l2', materialCode: 'CHROME-007', teacher: 'Carlos Mendoza', group: '6º Primaria', dueDate: getRelativeDate(-1), returned: false },
+            { id: 'l3', materialCode: 'MIC-001', teacher: 'Ana Rivas', group: 'Música / Especialidades', dueDate: getRelativeDate(4), returned: false }
+        ];
+
+        const DEFAULT_BLOCKS = [
+            { day: 'Lunes', slot: 'T2 (10:00 - 11:00)', reason: 'Música 4º A' },
+            { day: 'Miércoles', slot: 'T4 (12:00 - 13:00)', reason: 'Música 6º B' },
+            { day: 'Viernes', slot: 'T1 (09:00 - 10:00)', reason: 'Música 3º A' }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadAppData();
+            document.getElementById('app-loan-start').value = getRelativeDate(0);
+            document.getElementById('app-loan-due').value = getRelativeDate(7);
+            renderAppAll();
+        });
+
+        function loadAppData() {
+            materials = JSON.parse(localStorage.getItem(STORAGE_MATERIALS_KEY)) || generateAppMaterials();
+            loans = JSON.parse(localStorage.getItem(STORAGE_LOANS_KEY)) || DEFAULT_LOANS;
+            reservations = JSON.parse(localStorage.getItem(STORAGE_RESERVATIONS_KEY)) || [];
+            musicBlocks = JSON.parse(localStorage.getItem(STORAGE_BLOCKS_KEY)) || DEFAULT_BLOCKS;
+        }
+
+        function saveAppData() {
+            localStorage.setItem(STORAGE_MATERIALS_KEY, JSON.stringify(materials));
+            localStorage.setItem(STORAGE_LOANS_KEY, JSON.stringify(loans));
+            localStorage.setItem(STORAGE_RESERVATIONS_KEY, JSON.stringify(reservations));
+            localStorage.setItem(STORAGE_BLOCKS_KEY, JSON.stringify(musicBlocks));
+        }
+
+        function renderAppAll() {
+            populateQuickScanBtns();
+            populateLoanDropdown();
+            renderActiveReturnsList();
+            renderScheduleDaySlots();
+        }
+
+        // Tab Navigation Switcher
+        function switchAppTab(tabId) {
+            const tabs = ['camera', 'loan', 'returns', 'schedule'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`app-tab-${t}`);
+                const nav = document.getElementById(`app-nav-${t}`);
+                if (t === tabId) {
+                    sec.classList.remove('hidden');
+                    nav.classList.add('text-emerald-400');
+                    nav.classList.remove('text-slate-400');
+                } else {
+                    sec.classList.add('hidden');
+                    nav.classList.remove('text-emerald-400');
+                    nav.classList.add('text-slate-400');
+                }
+            });
+
+            if (tabId === 'returns') renderActiveReturnsList();
+            if (tabId === 'schedule') renderScheduleDaySlots();
+        }
+
+        // Toast Notification
+        function showToast(msg, type='info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-3 rounded-2xl shadow-xl text-xs font-bold text-white flex items-center gap-2 ${
+                type==='success' ? 'bg-emerald-600' : type==='error' ? 'bg-rose-600' : 'bg-amber-600'
+            }`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        // Reset Data
+        function resetDataConfirm() {
+            if(confirm('¿Restablecer datos de prueba de la App CEIP Toxiria?')) {
+                materials = generateAppMaterials();
+                loans = DEFAULT_LOANS;
+                reservations = [];
+                musicBlocks = DEFAULT_BLOCKS;
+                saveAppData();
+                renderAppAll();
+                showToast('App restablecida', 'success');
+            }
+        }
+
+        // TAB 1: SCANNER
+        function populateQuickScanBtns() {
+            const container = document.getElementById('app-quick-scan-btns');
+            container.innerHTML = '';
+            const samples = ['CHROME-003', 'CHROME-005', 'MIC-001', 'PORT-001', 'TAB-005'];
+            samples.forEach(code => {
+                const b = document.createElement('button');
+                b.className = "px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono font-bold text-emerald-400 btn-active";
+                b.textContent = code;
+                b.onclick = () => {
+                    document.getElementById('app-qr-input').value = code;
+                    handleAppQRScan();
+                };
+                container.appendChild(b);
+            });
+        }
+
+        function handleAppQRScan() {
+            const code = document.getElementById('app-qr-input').value.trim().toUpperCase();
+            const resCard = document.getElementById('app-scan-result');
+            resCard.classList.remove('hidden');
+
+            const item = materials.find(m => m.code === code);
+            if (!item) {
+                resCard.innerHTML = `<p class="text-xs text-rose-400 text-center font-bold">Código ${code} no encontrado</p>`;
+                return;
+            }
+
+            const activeLoan = loans.find(l => l.materialCode === code && !l.returned);
+            const isLoaned = item.status === 'LOANED';
+
+            resCard.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="font-mono text-xs text-emerald-400 font-bold">${item.code}</span>
+                        <h3 class="font-bold text-sm text-white">${item.name}</h3>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold ${isLoaned?'bg-amber-500/20 text-amber-400':'bg-emerald-500/20 text-emerald-400'}">
+                        ${isLoaned?'EN PRÉSTAMO':'DISPONIBLE'}
+                    </span>
+                </div>
+                ${isLoaned && activeLoan ? `
+                    <p class="text-xs text-slate-400">Prestado a: <strong class="text-white">${activeLoan.teacher}</strong> (${activeLoan.group})</p>
+                `:''}
+                <div class="pt-1">
+                    ${!isLoaned ? `
+                        <button onclick="quickSelectLoanItem('${item.code}')" class="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold btn-active">
+                            PRESTAR ESTE EQUIPO
+                        </button>
+                    ` : `
+                        <button onclick="appReturnLoanByCode('${item.code}')" class="w-full py-2.5 bg-amber-600 text-white rounded-xl text-xs font-bold btn-active">
+                            DEVOLVER AHORA (1-CLIC)
+                        </button>
+                    `}
+                </div>
+            `;
+        }
+
+        function quickSelectLoanItem(code) {
+            switchAppTab('loan');
+            document.getElementById('app-loan-item-code').value = code;
+        }
+
+        // TAB 2: PRÉSTAMO
+        function populateLoanDropdown() {
+            const select = document.getElementById('app-loan-item-code');
+            select.innerHTML = '';
+            const avail = materials.filter(m => m.status === 'AVAILABLE');
+            avail.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.code;
+                opt.textContent = `${m.code} - ${m.name}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function handleAppCreateLoan(e) {
+            e.preventDefault();
+            const teacher = document.getElementById('app-loan-teacher').value.trim();
+            const group = document.getElementById('app-loan-group').value;
+            const code = document.getElementById('app-loan-item-code').value;
+            const dueDate = document.getElementById('app-loan-due').value;
+
+            const item = materials.find(m => m.code === code);
+            if (item) item.status = 'LOANED';
+
+            loans.push({
+                id: 'l-' + Date.now(),
+                materialCode: code,
+                teacher,
+                group,
+                dueDate,
+                returned: false
+            });
+
+            saveAppData();
+            document.getElementById('app-loan-form').reset();
+            renderAppAll();
+            switchAppTab('returns');
+            showToast(`Préstamo de ${code} confirmado`, 'success');
+        }
+
+        // TAB 3: DEVOLUCIONES
+        function renderActiveReturnsList() {
+            const container = document.getElementById('app-active-loans-list');
+            const badge = document.getElementById('app-badge-returns');
+            const activeLoans = loans.filter(l => !l.returned);
+
+            badge.textContent = activeLoans.length;
+            container.innerHTML = '';
+
+            if (activeLoans.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-500 text-xs">
+                        <i class="fa-solid fa-circle-check text-3xl text-emerald-500 mb-2 block"></i>
+                        No hay equipos pendientes de devolución.
+                    </div>
+                `;
+                return;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+
+            activeLoans.forEach(l => {
+                const isOverdue = l.dueDate < today;
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-2xl border flex items-center justify-between ${
+                    isOverdue ? 'bg-rose-950/40 border-rose-800' : 'bg-slate-800 border-slate-700'
+                }`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs font-bold text-emerald-400">${l.materialCode}</span>
+                            ${isOverdue ? '<span class="text-[9px] bg-rose-600 text-white px-1.5 py-0.5 rounded font-bold">VENCIDO</span>':''}
+                        </div>
+                        <h4 class="font-bold text-sm text-white">${l.teacher}</h4>
+                        <p class="text-[11px] text-slate-400">${l.group} | Dev: ${l.dueDate}</p>
+                    </div>
+                    <button onclick="appReturnLoanById('${l.id}')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl btn-active shadow-md">
+                        Devolver
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function appReturnLoanById(id) {
+            const l = loans.find(x => x.id === id);
+            if (l) {
+                l.returned = true;
+                const item = materials.find(m => m.code === l.materialCode);
+                if (item) item.status = 'AVAILABLE';
+                saveAppData();
+                renderAppAll();
+                showToast(`Equipo ${l.materialCode} devuelto al inventario`, 'success');
+            }
+        }
+
+        function appReturnLoanByCode(code) {
+            const l = loans.find(x => x.materialCode === code && !x.returned);
+            if (l) appReturnLoanById(l.id);
+        }
+
+        // TAB 4: CALENDARIO AULA STEAM
+        function setScheduleDay(day) {
+            selectedDay = day;
+            document.querySelectorAll('.app-day-btn').forEach(btn => {
+                if (btn.textContent.toLowerCase().includes(day.substring(0,3).toLowerCase())) {
+                    btn.classList.add('bg-emerald-600', 'text-white');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.remove('bg-emerald-600', 'text-white');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+            renderScheduleDaySlots();
+        }
+
+        function renderScheduleDaySlots() {
+            const container = document.getElementById('app-day-slots-container');
+            container.innerHTML = '';
+
+            TIME_SLOTS.forEach(slot => {
+                const isRecreo = slot.includes('RECREO');
+                const isMusic = musicBlocks.some(b => b.day === selectedDay && b.slot === slot);
+                const res = reservations.find(r => r.day === selectedDay && r.slot === slot);
+
+                const div = document.createElement('div');
+                div.className = "p-3 rounded-2xl border text-xs flex items-center justify-between ";
+
+                if (isRecreo) {
+                    div.className += "bg-slate-950 border-slate-800 text-slate-500 justify-center font-bold text-[11px]";
+                    div.innerHTML = `<span>RECREO (11:30 - 12:00)</span>`;
+                } else if (isMusic) {
+                    div.className += "bg-amber-950/40 border-amber-800 text-amber-200";
+                    div.innerHTML = `
+                        <div>
+                            <span class="font-mono text-[10px] text-amber-400 font-bold block">${slot}</span>
+                            <span class="font-extrabold text-amber-300 flex items-center gap-1">
+                                <i class="fa-solid fa-lock text-xs"></i> BLOQUEADO CLASE MÚSICA
+                            </span>
+                        </div>
+                        <span class="text-[10px] bg-amber-900/60 px-2 py-1 rounded-lg text-amber-300 font-bold">Fijo</span>
+                    `;
+                } else if (res) {
+                    div.className += "bg-blue-950/40 border-blue-800 text-blue-200";
+                    div.innerHTML = `
+                        <div>
+                            <span class="font-mono text-[10px] text-blue-400 font-bold block">${slot}</span>
+                            <span class="font-extrabold text-white">${res.teacher} (${res.group})</span>
+                        </div>
+                        <button onclick="cancelAppReservation('${res.id}')" class="text-[10px] bg-rose-900/60 text-rose-300 px-2 py-1 rounded-lg font-bold btn-active">Anular</button>
+                    `;
+                } else {
+                    div.className += "bg-slate-800 border-slate-700 hover:border-emerald-500 cursor-pointer btn-active";
+                    div.onclick = () => reserveAppSlot(selectedDay, slot);
+                    div.innerHTML = `
+                        <div>
+                            <span class="font-mono text-[10px] text-slate-400 font-bold block">${slot}</span>
+                            <span class="font-bold text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-plus-circle"></i> Libre para reservar</span>
+                        </div>
+                        <span class="text-[10px] bg-emerald-600 text-white px-2.5 py-1 rounded-xl font-bold">Reservar</span>
+                    `;
+                }
+
+                container.appendChild(div);
+            });
+        }
+
+        function reserveAppSlot(day, slot) {
+            const teacher = prompt(`Reservar Aula STEAM (${day} - ${slot})\nIntroduce nombre del docente:`);
+            if (!teacher) return;
+            const group = prompt('Introduce el Curso / Grupo:');
+            if (!group) return;
+
+            reservations.push({
+                id: 'r-' + Date.now(),
+                day,
+                slot,
+                teacher,
+                group
+            });
+
+            saveAppData();
+            renderScheduleDaySlots();
+            showToast(`Aula reservada para ${teacher}`, 'success');
+        }
+
+        function cancelAppReservation(id) {
+            if(confirm('¿Anular esta reserva del Aula STEAM?')) {
+                reservations = reservations.filter(r => r.id !== id);
+                saveAppData();
+                renderScheduleDaySlots();
+                showToast('Reserva anulada', 'info');
+            }
+        }
+    </script>
+</body>
+</html>
